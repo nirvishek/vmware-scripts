@@ -1,19 +1,21 @@
+import yaml
 import os
-import fileinput
-file = open("servers.txt","r")
+with open("icap-servers.yaml", 'r') as yamlFile:
+    data = yaml.safe_load(yamlFile)
+
+# Get target value
+target = data.get("all.icap.glasswall-icap.com")
 names = []
 ips = []
 port = []
-for line in file:
-    splitLine = line.split(",")
-    names.append(splitLine[0])
-    ips.append(splitLine[1].strip())
-    port.append(splitLine[2].strip())
-file.close()
+for server in target:
+    names.append(server.get('name'))
+    ips.append(server.get('ip'))
+    port.append(server.get('port'))
 
 servers = []
 for x, y, z in zip(names, ips, port):
-    servers.append("  server " + x + " " + y + ":" + z + " check")
+    servers.append("  server " + x + " " + y + ":" + str(z) + " check")
 servers = "\n".join(servers)
 template_file = open("haproxy.tmp", "r")
 content = template_file.readlines()
