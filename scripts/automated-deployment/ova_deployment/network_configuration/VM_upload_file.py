@@ -10,6 +10,8 @@ import re
 import os
 
 from .get_vm_info import GetVMInfo
+from k8_vmware.vsphere.Sdk import Sdk
+
 
 def get_args():
     """Get command line args from the user.
@@ -47,80 +49,94 @@ def get_args():
     cli.prompt_for_password(args)
     return args
 
-def get_instance_uuid():
-    vm_info_data = GetVMInfo().main()
-    print(vm_info_data)
-    inst_uuid = vm_info_data.get("instance_uuid")
-    return inst_uuid
 
-def main():
-    """
-    Simple command-line program for Uploading a file from host to guest
-    """
-    instance_uuid = get_instance_uuid()
-    print("Instance UUID: %s" % instance_uuid)
-    args = get_args()
+class VMUploadFile:
 
-    vm_path = os.environ.get("VM_UPLOAD_PATH")
-    
-    # file to be uploaded
-    host_file_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "network.sh")
-    args.upload_file = host_file_path
-    print(host_file_path)
+    def __init__(self):
 
-    try:
-        service_instance = connect.SmartConnectNoSSL(host=args.host,
-                                                    user=args.user,
-                                                    pwd=args.password,
-                                                    port=args.port)
+        self.args = get_args()
+        
+        # path of file to upload
+        self.host_file_path = os.path.dirname(os.path.realpath(__file__))
 
-        atexit.register(connect.Disconnect, service_instance)
-        content = service_instance.RetrieveContent()
-
-        # vm = content.searchIndex.FindByUuid(None, args.vm_uuid, True)
-        vm = content.searchIndex.FindByUuid(datacenter=None,
-                                            uuid=instance_uuid,
-                                            vmSearch=True,
-                                            instanceUuid=True)
-        print(vm)
-        # tools_status = vm.guest.toolsStatus
-        # if (tools_status == 'toolsNotInstalled' or
-        #         tools_status == 'toolsNotRunning'):
-        #     raise SystemExit(
-        #         "VMwareTools is either not running or not installed. "
-        #         "Rerun the script after verifying that VMWareTools "
-        #         "is running")
-
-        creds = vim.vm.guest.NamePasswordAuthentication(
-            username=args.vm_user, password=args.vm_pwd)
-        with open(args.upload_file, 'rb') as myfile:
-            fileinmemory = myfile.read()
+        # inside vm path to upload to
+        self.vm_path = os.environ.get("VM_UPLOAD_PATH")
 
         try:
-            file_attribute = vim.vm.guest.FileManager.FileAttributes()
-            url = content.guestOperationsManager.fileManager. \
-                InitiateFileTransferToGuest(vm, creds, vm_path,
-                                            file_attribute,
-                                            len(fileinmemory), True)
-            # When : host argument becomes https://*:443/guestFile?
-            # Ref: https://github.com/vmware/pyvmomi/blob/master/docs/ \
-            #            vim/vm/guest/FileManager.rst
-            # Script fails in that case, saying URL has an invalid label.
-            # By having hostname in place will take take care of this.
-            url = re.sub(r"^https://\*:", "https://"+str(args.host)+":", url)
-            resp = requests.put(url, data=fileinmemory, verify=False)
-            if not resp.status_code == 200:
-                print("Error while uploading file")
-            else:
-                print("Successfully uploaded file")
-        except IOErrorn as e:
-            print(e)
-    except vmodl.MethodFault as error:
-        print("Caught vmodl fault : " + error.msg)
-        return -1
+            self.service_instance = connect.SmartConnectNoSSL(  host=self.args.host,
+                                                                user=self.args.user,
+                                                                pwd=self.args.password,
+                                                                port=self.args.port)
 
-    return 0
+            atexit.register(connect.Disconnect, self.service_instance)
+            print("connected successfully to esxi server %s!" % self.args.host)
+        
+        except Exception as e:     
+            print("Unable to connect to %s" % self.args.host)
+            raise e
+
+    def get_instance_uuid(self):
+        vm_info_data = GetVMInfo().main()
+        print(vm_info_data)
+        inst_uuid = vm_info_data.get("instance_uuid")
+        return inst_uuid
+
+    def main(self):
+        """
+        Simple command-line program for Uploading a file from host to guest
+        """
+        instance_uuid = self.get_instance_uuid()
+        print("Instance UUID: %s" % instance_uuid)
+        
+        upload_file = os.path.join(self.host_file_path, os.environ.get("UPLOAD_FILE_NAME"))
+        self.args.upload_file = upload_file
+        print(upload_file)
+
+        try:
+            
+            content = self.service_instance.RetrieveContent()
+
+            # vm = content.searchIndex.FindByUuid(None, args.vm_uuid, True)
+            vm = content.searchIndex.FindByUuid(datacenter=None,
+                                                uuid=instance_uuid,
+                                                vmSearch=True,
+                                                instanceUuid=True)
+            
+            # sdk = Sdk()
+            # vm = sdk.find_by_uuid(instance_uuid)
+
+            print("vm:", vm)
+            
+            creds = vim.vm.guest.NamePasswordAuthentication(
+                username=self.args.vm_user, password=self.args.vm_pwd)
+            with open(self.args.upload_file, 'rb') as myfile:
+                fileinmemory = myfile.read()
+
+            try:
+                file_attribute = vim.vm.guest.FileManager.FileAttributes()
+                url = content.guestOperationsManager.fileManager. \
+                    InitiateFileTransferToGuest(vm, creds, self.vm_path,
+                                                file_attribute,
+                                                len(fileinmemory), True)
+                # When : host argument becomes https://*:443/guestFile?
+                # Ref: https://github.com/vmware/pyvmomi/blob/master/docs/ \
+                #            vim/vm/guest/FileManager.rst
+                # Script fails in that case, saying URL has an invalid label.
+                # By having hostname in place will take take care of this.
+                url = re.sub(r"^https://\*:", "https://"+str(self.args.host)+":", url)
+                resp = requests.put(url, data=fileinmemory, verify=False)
+                if not resp.status_code == 200:
+                    print("Error while uploading file")
+                else:
+                    print("Successfully uploaded file")
+            except IOErrorn as e:
+                print(e)
+        except vmodl.MethodFault as error:
+            print("Caught vmodl fault : " + error.msg)
+            return -1
+
+        return 0
 
 # Start program
 if __name__ == "__main__":
-    main()
+    VMUploadFile().main()

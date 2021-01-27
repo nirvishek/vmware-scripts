@@ -18,7 +18,7 @@ from pyVim.connect import SmartConnectNoSSL, Disconnect
 from pyVmomi import vim, vmodl
 
 # from .ovf_handler import OvfHandler
-from k8_vmware.vsphere.OVA import OvfHandler
+from k8_vmware.vsphere.OVA import OvfHandler, OVA
 from k8_vmware.vsphere.Sdk import Sdk
 
 
@@ -40,10 +40,12 @@ def setup_args():
     return cli.prompt_for_password(parser.parse_args())
 
 
-class VMDeployOVA():
+class VMDeployOVA:
 
     def __init__(self):
         self.args = setup_args()
+        self.sdk = Sdk()
+
         # print(self.args.host, args.user, args.password, args.port)
         try:
             self.si = SmartConnectNoSSL(host=self.args.host,
@@ -141,12 +143,10 @@ class VMDeployOVA():
             raise Exception('Failed to find any free datastores on %s' % dc.name)
         return largest
 
-    @staticmethod
-    def power_on_vm(host, user, pwd, vm_name):
+    def power_on_vm(self, host, user, pwd, vm_name):
 
-        sdk = Sdk()
         try:
-            vm = sdk.find_by_name(vm_name)
+            vm = self.sdk.find_by_name(vm_name)
             vm.task().power_on()
         except Exception as e:
             print(e)
@@ -164,13 +164,13 @@ class VMDeployOVA():
 
         # get datacenter
         if self.args.datacenter:
-            dc = sdk.datacenter()
+            dc = self.sdk.datacenter()
         else:
             dc = self.si.content.rootFolder.childEntity[0]
         
         # define datastore
         if self.args.datastore:
-            ds = sdk.datastore()
+            ds = self.sdk.datastore()
         else:
             ds = VMDeployOVA.get_largest_free_ds(dc)
 
@@ -225,10 +225,12 @@ class VMDeployOVA():
     def main(self):
 
         # deploy the ova
-        self.deploy()
-        
+        self.deploy() 
+        # ova = OVA() # TODO: edit k8-vmware upload-ova method with entity name param
+        # ova.upload_ova(self.args.ova_path)
+
         # power on the vm
-        return(power_on_vm(self.args.host, args.user, args.password, args.vm_name))
+        return(self.power_on_vm(self.args.host, self.args.user, self.args.password, self.args.vm_name))
 
 
 if __name__ == "__main__":

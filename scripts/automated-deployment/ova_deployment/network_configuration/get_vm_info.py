@@ -24,22 +24,31 @@ def get_args():
 class GetVMInfo():
     
     def __init__(self):
-        pass
 
-    def print_vm_info(self, virtual_machine):
+        self.args = get_args()
+        
+        try:
+            self.si = SmartConnectNoSSL(host=self.args.host,
+                                        user=self.args.user,
+                                        pwd=self.args.password,
+                                        port=self.args.port)
+
+            atexit.register(Disconnect, self.si)
+
+            print("connected successfully to esxi server %s!" % self.args.host)
+        
+        except Exception as e:
+            
+            print("Unable to connect to %s" % self.args.host)
+            raise e
+
+    def collect_vm_info(self, virtual_machine):
         """
         Print information for a particular virtual machine or recurse into a
         folder with depth protection
         """
         vm_info_dict = dict()
-
         summary = virtual_machine.summary
-        print("Name       : ", summary.config.name)
-        print("Template   : ", summary.config.template)
-        print("Path       : ", summary.config.vmPathName)
-        print("Guest      : ", summary.config.guestFullName)
-        print("Instance UUID : ", summary.config.instanceUuid)
-        print("Bios UUID     : ", summary.config.uuid)
 
         vm_info_dict["name"] = summary.config.name
         vm_info_dict["template"] = summary.config.template
@@ -47,14 +56,19 @@ class GetVMInfo():
         vm_info_dict["guest"] = summary.config.guestFullName
         vm_info_dict["instance_uuid"] = summary.config.instanceUuid
         vm_info_dict["bios_uuid"] = summary.config.uuid
+        vm_info_dict["annotation"] = summary.config.annotation
+        vm_info_dict["state"] = summary.runtime.powerState
 
-        annotation = summary.config.annotation
-        vm_info_dict["annotation"] = annotation
+        print("Name       : ", vm_info_dict["name"])
+        print("Template   : ", vm_info_dict["template"])
+        print("Path       : ", vm_info_dict["path"])
+        print("Guest      : ", vm_info_dict["guest"])
+        print("Instance UUID : ", vm_info_dict["instance_uuid"])
+        print("Bios UUID     : ", vm_info_dict["bios_uuid"])
 
         if annotation:
-            print("Annotation : ", annotation)
-        print("State      : ", summary.runtime.powerState)
-        vm_info_dict["state"] = summary.runtime.powerState
+            print("Annotation : ", vm_info_dict["annotation"])
+        print("State      : ", vm_info_dict["state"])
 
         if summary.guest is not None:
             ip_address = summary.guest.ipAddress
@@ -82,24 +96,11 @@ class GetVMInfo():
         vm_info = GetVMInfo()
         vm_info_data = {}
 
-        args = get_args()
-        args.find = os.environ.get("VM_NAME")
+        self.args.find = os.environ.get("VM_NAME")
 
         try:
-            # if args.disable_ssl_verification:
-            service_instance = connect.SmartConnectNoSSL(host=args.host,
-                                                            user=args.user,
-                                                            pwd=args.password,
-                                                            port=int(args.port))
-        # else:
-            #     service_instance = connect.SmartConnect(host=args.host,
-            #                                             user=args.user,
-            #                                             pwd=args.password,
-            #                                             port=int(args.port))
-
-            atexit.register(connect.Disconnect, service_instance)
-
-            content = service_instance.RetrieveContent()
+        
+            content = self.service_instance.RetrieveContent()
 
             container = content.rootFolder  # starting point to look into
             viewType = [vim.VirtualMachine]  # object types to look for
@@ -108,14 +109,14 @@ class GetVMInfo():
                 container, viewType, recursive)
 
             children = containerView.view
-            if args.find is not None:
+            if self.args.find is not None:
                 pat = re.compile(args.find, re.IGNORECASE)
             for child in children:
-                if args.find is None:
-                    vm_info_data = vm_info.print_vm_info(child)
+                if self.args.find is None:
+                    vm_info_data = vm_info.collect_vm_info(child)
                 else:
                     if pat.search(child.summary.config.name) is not None:
-                        vm_info_data = vm_info.print_vm_info(child)
+                        vm_info_data = vm_info.collect_vm_info(child)
 
         except vmodl.MethodFault as error:
             print("Caught vmodl fault : " + error.msg)
