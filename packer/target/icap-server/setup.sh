@@ -4,6 +4,21 @@ if [ -f ./env ] ; then
 source ./env
 fi
 
+# install wizard for ova/esxi.
+# cloning vmware scripts repo
+git clone --single-branch -b main https://github.com/k8-proxy/vmware-scripts.git ~/scripts
+
+# installing the wizard
+sudo install -T ~/scripts/scripts/wizard/wizard.sh /usr/local/bin/wizard -m 0755
+
+# installing initconfig ( for running wizard on reboot )
+sudo cp -f ~/scripts/scripts/bootscript/initconfig.service /etc/systemd/system/initconfig.service
+sudo install -T ~/scripts/scripts/bootscript/initconfig.sh /usr/local/bin/initconfig.sh -m 0755
+sudo systemctl daemon-reload
+
+# enable initconfig for the next reboot
+sudo systemctl enable initconfig
+
 # install k3s
 curl -sfL https://get.k3s.io | sh -
 mkdir ~/.kube && sudo install -T /etc/rancher/k3s/k3s.yaml ~/.kube/config -m 600 -o $USER
