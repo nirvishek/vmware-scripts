@@ -83,3 +83,9 @@ helm install sow-monitoring monitoring --set monitoring.elasticsearch.host=$MONI
 
 # wait until the pods are up
 # sleep 120s
+
+# allow password login (useful when deployed to esxi)
+SSH_PASSWORD=${SSH_PASSWORD:-glasswall}
+printf "${SSH_PASSWORD}\n${SSH_PASSWORD}" | sudo passwd ubuntu
+sudo sed -i "s/.*PasswordAuthentication.*/PasswordAuthentication yes/g" /etc/ssh/sshd_config
+sudo service ssh restart
