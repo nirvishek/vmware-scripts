@@ -4,38 +4,38 @@ if [ -f ./env ] ; then
 source ./env
 fi
 
-# install wizard for ova/esxi.
-# update packages
-sudo apt update && sudo apt upgrade -y
+# # install wizard for ova/esxi.
+# # update packages
+# sudo apt update && sudo apt upgrade -y
 
-# install needed packages
-sudo apt install -y telnet tcpdump open-vm-tools net-tools dialog curl git sed grep fail2ban
-sudo systemctl enable fail2ban.service
-sudo tee -a /etc/fail2ban/jail.d/sshd.conf << EOF > /dev/null
-[sshd]
-enabled = true
-port = ssh
-action = iptables-multiport
-logpath = /var/log/auth.log
-bantime  = 10h
-findtime = 10m
-maxretry = 5
-EOF
-sudo systemctl restart fail2ban
+# # install needed packages
+# sudo apt install -y telnet tcpdump open-vm-tools net-tools dialog curl git sed grep fail2ban
+# sudo systemctl enable fail2ban.service
+# sudo tee -a /etc/fail2ban/jail.d/sshd.conf << EOF > /dev/null
+# [sshd]
+# enabled = true
+# port = ssh
+# action = iptables-multiport
+# logpath = /var/log/auth.log
+# bantime  = 10h
+# findtime = 10m
+# maxretry = 5
+# EOF
+# sudo systemctl restart fail2ban
 
-# cloning vmware scripts repo
-git clone --single-branch -b main https://github.com/k8-proxy/vmware-scripts.git ~/scripts
+# # cloning vmware scripts repo
+# git clone --single-branch -b main https://github.com/k8-proxy/vmware-scripts.git ~/scripts
 
-# installing the wizard
-sudo install -T ~/scripts/scripts/wizard/wizard.sh /usr/local/bin/wizard -m 0755
+# # installing the wizard
+# sudo install -T ~/scripts/scripts/wizard/wizard.sh /usr/local/bin/wizard -m 0755
 
-# installing initconfig ( for running wizard on reboot )
-sudo cp -f ~/scripts/scripts/bootscript/initconfig.service /etc/systemd/system/initconfig.service
-sudo install -T ~/scripts/scripts/bootscript/initconfig.sh /usr/local/bin/initconfig.sh -m 0755
-sudo systemctl daemon-reload
+# # installing initconfig ( for running wizard on reboot )
+# sudo cp -f ~/scripts/scripts/bootscript/initconfig.service /etc/systemd/system/initconfig.service
+# sudo install -T ~/scripts/scripts/bootscript/initconfig.sh /usr/local/bin/initconfig.sh -m 0755
+# sudo systemctl daemon-reload
 
-# enable initconfig for the next reboot
-sudo systemctl enable initconfig
+# # enable initconfig for the next reboot
+# sudo systemctl enable initconfig
 
 # install k3s
 curl -sfL https://get.k3s.io | sh -
