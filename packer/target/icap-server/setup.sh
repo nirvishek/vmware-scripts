@@ -5,8 +5,9 @@ source ./env
 fi
 
 # install wizard to setup network (for OVA)
-if [ -f ./install-wizard.sh ] ; then
-source ./install-wizard.sh
+if [ -f ./update_partition_size.sh ] ; then
+chmod +x ./update_partition_size.sh
+./update_partition_size.sh
 fi
 
 # install k3s
