@@ -42,7 +42,7 @@ def main(args):
     SSLVerify = False
     logging.captureWarnings(True)
 
-    for f in args + [ os.path.dirname(__file__) + '/config.yml' ]:
+    for f in args + [ os.path.dirname(__file__) + 'config.yml' ]:
         try:
             with open(f) as file:
                 config = yaml.load(file, Loader=yaml.Loader)
