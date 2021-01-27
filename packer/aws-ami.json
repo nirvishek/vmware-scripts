@@ -49,11 +49,6 @@
             "script": "./scripts/config/init-config.sh"
         },
         {
-          "type": "shell",
-          "script": "scripts/config/init-config.sh",
-          "execute_command": "chmod +x {{.Path}}; {{.Path}}"
-        },
-        {
             "type": "file",
             "source":"./setup",
             "destination":"/tmp/"
