@@ -25,7 +25,8 @@ echo "Done installing helm"
 
 # get source code, we clone in in home dir so we can easilly update in place
 cd ~
-git clone https://github.com/k8-proxy/icap-infrastructure.git -b k8-develop && cd icap-infrastructure
+ICAP_BRANCH=${ICAP_BRANCH:-k8-main}
+git clone https://github.com/k8-proxy/icap-infrastructure.git -b $ICAP_BRANCH && cd icap-infrastructure
 
 # Create namespaces
 kubectl create ns icap-adaptation
