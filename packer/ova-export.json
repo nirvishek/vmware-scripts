@@ -1,0 +1,6 @@
+{
+    "ContainerFormat": "ova",
+    "DiskImageFormat": "VMDK",
+    "S3Bucket": "glasswall-sow-ova",
+    "S3Prefix": "vms/<vm_name>/<vm_name>-"
+}

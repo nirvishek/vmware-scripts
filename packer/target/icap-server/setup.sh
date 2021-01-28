@@ -4,6 +4,12 @@ if [ -f ./env ] ; then
 source ./env
 fi
 
+# install wizard to setup network (for OVA)
+if [ -f ./update_partition_size.sh ] ; then
+chmod +x ./update_partition_size.sh
+./update_partition_size.sh
+fi
+
 # install k3s
 curl -sfL https://get.k3s.io | sh -
 mkdir ~/.kube && sudo install -T /etc/rancher/k3s/k3s.yaml ~/.kube/config -m 600 -o $USER
@@ -19,7 +25,8 @@ echo "Done installing helm"
 
 # get source code, we clone in in home dir so we can easilly update in place
 cd ~
-git clone https://github.com/k8-proxy/icap-infrastructure.git -b k8-develop && cd icap-infrastructure
+ICAP_BRANCH=${ICAP_BRANCH:-k8-main}
+git clone https://github.com/k8-proxy/icap-infrastructure.git -b $ICAP_BRANCH && cd icap-infrastructure
 
 # Create namespaces
 kubectl create ns icap-adaptation
@@ -83,3 +90,9 @@ helm install sow-monitoring monitoring --set monitoring.elasticsearch.host=$MONI
 
 # wait until the pods are up
 # sleep 120s
+
+# allow password login (useful when deployed to esxi)
+SSH_PASSWORD=${SSH_PASSWORD:-glasswall}
+printf "${SSH_PASSWORD}\n${SSH_PASSWORD}" | sudo passwd ubuntu
+sudo sed -i "s/.*PasswordAuthentication.*/PasswordAuthentication yes/g" /etc/ssh/sshd_config
+sudo service ssh restart

@@ -1,6 +1,7 @@
 {
     "variables": {
-      "security_group_ids": "sg-0120400d5eefb0b9e"
+      "security_group_ids": "sg-0120400d5eefb0b9e",
+      "create_ova": "false"
     },
     "builders": [
       {
@@ -64,6 +65,22 @@
             "type": "shell",
             "script": "./scripts/cleanup/cleanup.sh",
             "execute_command": "chmod +x {{.Path}}; sudo {{.Path}}"
+        },
+        {
+            "type": "shell-local",
+            "inline_shebang": "/bin/bash",
+            "inline": [
+                "set -e",
+                "CREATE_OVA={{user `create_ova`}}",
+                "if [[ $CREATE_OVA == 'true' ]]; then",
+                "aws ec2 create-instance-export-task --region {{user `region`}} --instance-id {{build `ID`}} --target-environment vmware --export-to-s3-task file://ova-export.json > out.json",
+                "fi"
+            ]
+        },
+        {
+            "type": "shell-local",
+            "script": "ova-check.sh",
+            "environment_vars": ["OVA_NAME=icap-server-{{user `github_sha`}}.ova", "VM_NAME={{user `vm_name`}}", "CREATE_OVA={{user `create_ova`}}"]
         }
     ]
 }
