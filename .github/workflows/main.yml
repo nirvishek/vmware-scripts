@@ -32,5 +32,5 @@ jobs:
       # deploy ova
       - name: Run a multi-line script
         run: |
-          cd scripts/,
+          cd scripts/
           python -m automated-deployment.ova_deployment.VM_deploy_ova
